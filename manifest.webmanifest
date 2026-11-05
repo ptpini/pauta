@@ -1,0 +1,24 @@
+{
+  "name": "Pauta",
+  "short_name": "Pauta",
+  "description": "Tu pauta de alimentación: macros del día, comidas, progreso de peso y cintura.",
+  "lang": "es-CL",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF1F4",
+  "theme_color": "#1F4FD1",
+  "categories": ["health", "fitness", "food"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Hoy", "url": "./#hoy", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] },
+    { "name": "Registrar peso", "url": "./#progreso", "icons": [{ "src": "icon-192.png", "sizes": "192x192" }] }
+  ]
+}

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es-CL">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pauta</title>
+<meta name="description" content="Tu pauta de alimentación: macros del día, comidas, progreso de peso y cintura.">
+<meta name="theme-color" content="#EEF1F4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F151B" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pauta">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="barlow-semi-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div id="app">
+  <header class="appbar" id="appbar"></header>
+  <main id="view" class="view" tabindex="-1"></main>
+  <nav class="tabbar" aria-label="Secciones">
+    <a href="#hoy" data-v="hoy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6.5h16M4 12h16M4 17.5h10"/><circle cx="19" cy="17.5" r="1.6"/></svg><span>Hoy</span></a>
+    <a href="#alimentos" data-v="alimentos"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v8a2.5 2.5 0 0 0 5 0V3M9.5 3v18M17 3c-1.7 0-3 2.4-3 6s1.3 4.5 3 4.5V21"/></svg><span>Alimentos</span></a>
+    <a href="#progreso" data-v="progreso"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M5 15l4.5-4.5 3.5 3L19 7"/><path d="M15 7h4v4"/></svg><span>Progreso</span></a>
+    <a href="#ajustes" data-v="ajustes"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg><span>Ajustes</span><i class="badge" id="setBadge" hidden></i></a>
+  </nav>
+</div>
+<div id="sheetHost"></div>
+<div id="toastHost" aria-live="polite"></div>
+<noscript><p style="padding:24px;font-family:sans-serif">Pauta necesita JavaScript activado.</p></noscript>
+<script src="app.js"></script>
+</body>
+</html>
