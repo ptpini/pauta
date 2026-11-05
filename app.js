@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -24,9 +24,59 @@ const BUILTIN = [
   {id:"marraqueta",name:"Marraqueta",cat:"carbo",unit:"unid",base:1,def:0.5,p:9,c:56,g:1},
   {id:"lentejas",name:"Lentejas cocidas",cat:"carbo",unit:"g",base:100,def:200,p:9,c:20,g:0.4},
   {id:"verduras",name:"Verduras / ensalada",cat:"otro",unit:"g",base:100,def:150,p:1.2,c:4,g:0.2},
-  {id:"aceite",name:"Aceite",cat:"grasa",unit:"cda",base:1,def:1,p:0,c:0,g:15},
+  {id:"aceite",name:"Aceite (maravilla u oliva)",cat:"grasa",unit:"cda",base:1,def:1,p:0,c:0,g:15},
   {id:"mani",name:"Maní sin sal",cat:"grasa",unit:"g",base:100,def:15,p:26,c:7,g:49},
-  {id:"burrito",name:"Burrito o fajita (estimado)",cat:"otro",unit:"unid",base:1,def:1,p:38,c:75,g:25}
+  {id:"burrito",name:"Burrito o fajita (estimado)",cat:"otro",unit:"unid",base:1,def:1,p:38,c:75,g:25},
+  /* --- v1.1: más alimentos genéricos --- */
+  {id:"jurel",name:"Jurel natural en lata (drenado)",cat:"prote",unit:"g",base:100,def:100,p:24,c:0,g:4.9},
+  {id:"quesillo_l",name:"Quesillo light",cat:"prote",unit:"g",base:100,def:100,p:13.9,c:4.4,g:1.3},
+  {id:"huevo_duro",name:"Huevo duro",cat:"prote",unit:"unid",base:1,def:2,p:6.3,c:0.4,g:4.8},
+  {id:"clara",name:"Clara de huevo",cat:"prote",unit:"unid",base:1,def:3,p:3.6,c:0.2,g:0.1},
+  {id:"jamon_pavo",name:"Jamón de pavo (lámina 20 g)",cat:"prote",unit:"lámina",base:1,def:3,p:3.4,c:0.5,g:0.7},
+  {id:"jamon_cerdo",name:"Jamón de cerdo (lámina 20 g)",cat:"prote",unit:"lámina",base:1,def:3,p:3.2,c:0.6,g:1.2},
+  {id:"queso_light",name:"Queso laminado light (lámina 20 g)",cat:"prote",unit:"lámina",base:1,def:2,p:5.4,c:0.2,g:2.8},
+  {id:"queso",name:"Queso gauda o mantecoso (lámina 20 g)",cat:"grasa",unit:"lámina",base:1,def:1,p:5,c:0.2,g:5.8},
+  {id:"cottage",name:"Queso cottage",cat:"prote",unit:"g",base:100,def:100,p:11,c:3.4,g:4.3},
+  {id:"yogur_light",name:"Yogurt light (pote 120 g)",cat:"prote",unit:"pote",base:1,def:1,p:4.4,c:6.4,g:0.2},
+  {id:"leche_desc",name:"Leche descremada",cat:"prote",unit:"ml",base:100,def:200,p:3.3,c:4.8,g:0.1},
+  {id:"trutro",name:"Trutro de pollo sin piel cocido",cat:"prote",unit:"g",base:100,def:120,p:26,c:0,g:8},
+  {id:"molida5",name:"Carne molida 5% cocida",cat:"prote",unit:"g",base:100,def:100,p:28,c:0,g:7},
+  {id:"merluza",name:"Merluza o reineta cocida",cat:"prote",unit:"g",base:100,def:150,p:20,c:0,g:1.5},
+  {id:"salmon",name:"Salmón cocido",cat:"prote",unit:"g",base:100,def:120,p:22,c:0,g:12},
+  {id:"arroz_int",name:"Arroz integral cocido",cat:"carbo",unit:"g",base:100,def:200,p:2.6,c:23,g:0.9},
+  {id:"fideos_int",name:"Fideos integrales cocidos",cat:"carbo",unit:"g",base:100,def:150,p:5.5,c:26.5,g:0.8},
+  {id:"porotos",name:"Porotos cocidos",cat:"carbo",unit:"g",base:100,def:150,p:8.7,c:23,g:0.5},
+  {id:"garbanzos",name:"Garbanzos cocidos",cat:"carbo",unit:"g",base:100,def:150,p:8.9,c:27,g:2.6},
+  {id:"camote",name:"Camote cocido",cat:"carbo",unit:"g",base:100,def:200,p:1.6,c:18,g:0.1},
+  {id:"choclo",name:"Choclo cocido (granos)",cat:"carbo",unit:"g",base:100,def:100,p:3.3,c:19,g:1.4},
+  {id:"quinoa",name:"Quínoa cocida",cat:"carbo",unit:"g",base:100,def:150,p:4.4,c:18.5,g:1.9},
+  {id:"hallulla",name:"Hallulla",cat:"carbo",unit:"unid",base:1,def:1,p:8,c:51,g:8},
+  {id:"tortilla",name:"Tortilla de trigo para wrap (40 g)",cat:"carbo",unit:"unid",base:1,def:1,p:3.6,c:20,g:3.2},
+  {id:"manzana",name:"Manzana grande (200 g)",cat:"carbo",unit:"unid",base:1,def:1,p:0.5,c:28,g:0.3},
+  {id:"naranja",name:"Naranja grande (200 g)",cat:"carbo",unit:"unid",base:1,def:1,p:1.9,c:23.5,g:0.2},
+  {id:"pera",name:"Pera (180 g)",cat:"carbo",unit:"unid",base:1,def:1,p:0.7,c:27,g:0.2},
+  {id:"mandarina",name:"Mandarina",cat:"carbo",unit:"unid",base:1,def:2,p:0.6,c:9.6,g:0.2},
+  {id:"kiwi",name:"Kiwi",cat:"carbo",unit:"unid",base:1,def:2,p:0.8,c:11,g:0.4},
+  {id:"durazno",name:"Durazno",cat:"carbo",unit:"unid",base:1,def:1,p:1.4,c:14,g:0.4},
+  {id:"frutillas",name:"Frutillas",cat:"carbo",unit:"g",base:100,def:200,p:0.7,c:7.7,g:0.3},
+  {id:"uvas",name:"Uvas",cat:"carbo",unit:"g",base:100,def:150,p:0.7,c:17,g:0.2},
+  {id:"sandia",name:"Sandía",cat:"carbo",unit:"g",base:100,def:300,p:0.6,c:7.6,g:0.2},
+  {id:"tomate",name:"Tomate (120 g)",cat:"otro",unit:"unid",base:1,def:1,p:1.1,c:4.7,g:0.2},
+  {id:"brocoli",name:"Brócoli cocido",cat:"otro",unit:"g",base:100,def:200,p:2.4,c:4.4,g:0.4},
+  {id:"zanahoria",name:"Zanahoria",cat:"otro",unit:"g",base:100,def:100,p:0.9,c:8,g:0.2},
+  {id:"zapallo_it",name:"Zapallo italiano",cat:"otro",unit:"g",base:100,def:200,p:1.2,c:2.2,g:0.3},
+  {id:"lechuga",name:"Lechuga",cat:"otro",unit:"g",base:100,def:100,p:1.2,c:1.8,g:0.2},
+  {id:"pepino",name:"Pepino",cat:"otro",unit:"g",base:100,def:150,p:0.7,c:3,g:0.1},
+  {id:"palta",name:"Palta",cat:"grasa",unit:"g",base:100,def:40,p:2,c:2,g:15},
+  {id:"nueces",name:"Nueces",cat:"grasa",unit:"g",base:100,def:15,p:15,c:7,g:65},
+  {id:"mant_mani",name:"Mantequilla de maní (cda 16 g)",cat:"grasa",unit:"cda",base:1,def:1,p:4,c:3,g:8},
+  {id:"mayo",name:"Mayonesa (cda 15 g)",cat:"grasa",unit:"cda",base:1,def:1,p:0.2,c:0.4,g:11},
+  {id:"mayo_light",name:"Mayonesa light (cda 15 g)",cat:"grasa",unit:"cda",base:1,def:1,p:0.1,c:1,g:5},
+  {id:"completo",name:"Completo italiano (estimado)",cat:"otro",unit:"unid",base:1,def:1,p:15,c:45,g:32},
+  {id:"empanada",name:"Empanada de pino (estimado)",cat:"otro",unit:"unid",base:1,def:1,p:20,c:50,g:28},
+  {id:"pizza",name:"Pizza, 1 trozo (estimado)",cat:"otro",unit:"trozo",base:1,def:2,p:12,c:33,g:10},
+  {id:"sushi",name:"Sushi, 10 piezas (estimado)",cat:"otro",unit:"porción",base:1,def:1,p:14,c:75,g:7},
+  {id:"hamburguesa",name:"Hamburguesa con papas fritas (estimado)",cat:"otro",unit:"combo",base:1,def:1,p:35,c:110,g:45}
 ];
 const CAT_LABEL = {prote:"Proteína",carbo:"Carbo",grasa:"Grasa",otro:"Otro"};
 const TYPES = {
@@ -35,34 +85,61 @@ const TYPES = {
   descanso:{label:"Descanso",short:"Descanso"}
 };
 /* Cada comida puede tener varias opciones; la primera es la que aparece por defecto. */
+const ALM_ENTRENO = [
+  {id:"arroz",label:"Con arroz",items:[["pechuga",100],["arroz",250],["aceite",1]]},
+  {id:"lentejas",label:"Arroz con lentejas",items:[["pechuga",100],["arroz",130],["lentejas",150],["aceite",1]]},
+  {id:"papas",label:"Con papas",items:[["pechuga",100],["papas",390],["aceite",1]]}
+];
+const CEN_ENTRENO = [
+  {id:"fideos",label:"Con fideos",items:[["pechuga",100],["fideos",150],["aceite",1]]},
+  {id:"papas",label:"Con papas",items:[["pechuga",100],["papas",260],["aceite",1]]},
+  {id:"jurel",label:"Jurel con arroz",items:[["jurel",130],["arroz",165],["aceite",0.5]]}
+];
 const TEMPLATES = {
   semana:[
     {key:"des",name:"Desayuno",time:"8:00 · trabajo",items:[["leche",400],["avena",60]]},
-    {key:"alm",name:"Almuerzo",time:"11:00",note:"Verduras a gusto",items:[["pechuga",100],["arroz",250],["aceite",1]]},
+    {key:"alm",name:"Almuerzo",time:"11:00",note:"Verduras a gusto",options:ALM_ENTRENO},
     {key:"pre",name:"Pre-entreno",time:"1:15 pm",items:[["leche",400],["avena",20],["platano",1]]},
     {key:"post",name:"Post-entreno",time:"Al terminar en el gym",items:[["leche",200],["scoop",1]]},
-    {key:"cen",name:"Cena",time:"Noche",note:"Verduras a gusto",items:[["pechuga",100],["fideos",150],["aceite",1]]}
+    {key:"cen",name:"Cena",time:"Noche",note:"Verduras a gusto",options:CEN_ENTRENO}
   ],
   finde:[
     {key:"pre",name:"Pre-entreno",time:"Al levantarte",items:[["leche",400],["avena",40]]},
     {key:"des",name:"Desayuno",time:"Después de entrenar",items:[["avena",80],["leche",200],["scoop",1]]},
-    {key:"alm",name:"Almuerzo",time:"2:00 pm",note:"Verduras a gusto",items:[["pechuga",100],["arroz",250],["aceite",1]]},
-    {key:"cen",name:"Cena",time:"7:30 pm",note:"Verduras a gusto",items:[["pechuga",100],["fideos",150],["aceite",1]]},
+    {key:"alm",name:"Almuerzo",time:"2:00 pm",note:"Verduras a gusto",options:ALM_ENTRENO},
+    {key:"cen",name:"Cena",time:"7:30 pm",note:"Verduras a gusto",options:CEN_ENTRENO},
     {key:"noc",name:"Noche",time:"9:30 pm",items:[["leche",400]]}
   ],
   descanso:[
     {key:"des",name:"Desayuno",time:"8:00 · trabajo",options:[
       {id:"atun",label:"Sándwich de atún",items:[["atun",1],["pan",3],["platano",1]]},
       {id:"huevos",label:"Huevos con pan",items:[["huevo",3],["pan",3],["platano",1]]},
-      {id:"yogurt",label:"Yogurt con avena",items:[["yogur_sp",2],["avena",30],["platano",1]]}
+      {id:"yogurt",label:"Yogurt con avena",items:[["yogur_sp",2],["avena",30],["platano",1]]},
+      {id:"jurel",label:"Jurel con pan",items:[["jurel",100],["pan",3],["tomate",1],["manzana",1]]},
+      {id:"quesillo",label:"Quesillo con pan",items:[["quesillo_l",150],["pan",3],["manzana",1]]},
+      {id:"jamonqueso",label:"Jamón y queso",items:[["pan",3],["jamon_pavo",4],["queso_light",2],["manzana",1]]},
+      {id:"palta",label:"Palta, huevo y jamón",items:[["pan",3],["palta",40],["huevo_duro",2],["jamon_pavo",3],["manzana",1]]}
     ]},
-    {key:"alm",name:"Almuerzo",time:"10:30 – 11:30",note:"Verduras a gusto",items:[["pechuga",170],["arroz",130],["aceite",1]]},
+    {key:"alm",name:"Almuerzo",time:"10:30 – 11:30",note:"Verduras a gusto",options:[
+      {id:"arroz",label:"Con arroz",items:[["pechuga",170],["arroz",130],["aceite",1]]},
+      {id:"lentejas",label:"Con lentejas",items:[["pechuga",170],["lentejas",150],["aceite",1]]},
+      {id:"papas",label:"Con papas",items:[["pechuga",170],["papas",200],["aceite",1]]}
+    ]},
     {key:"col",name:"Colación",time:"3:00 pm",options:[
       {id:"batido",label:"Batido + plátano",items:[["scoop",1],["platano",1]]},
+      {id:"batidom",label:"Batido + manzana",items:[["scoop",1],["manzana",1]]},
       {id:"yogurt",label:"Yogurt con avena",items:[["yogur_sp",2],["avena",20]]},
+      {id:"quesillo",label:"Quesillo + fruta",items:[["quesillo_l",100],["manzana",1]]},
+      {id:"huevos",label:"Huevos duros + fruta",items:[["huevo_duro",2],["manzana",1]]},
+      {id:"jurel",label:"Jurel con pan",items:[["jurel",100],["pan",2]]},
       {id:"atun",label:"Sándwich de atún",items:[["atun",1],["pan",2]]}
     ]},
-    {key:"cen",name:"Cena",time:"Noche",note:"Verduras a gusto",items:[["pechuga",190],["papas",250],["aceite",1]]}
+    {key:"cen",name:"Cena",time:"Noche",note:"Verduras a gusto",options:[
+      {id:"papas",label:"Con papas",items:[["pechuga",190],["papas",250],["aceite",1]]},
+      {id:"brocoli",label:"Papas y brócoli",items:[["pechuga",190],["papas",250],["brocoli",200],["aceite",1]]},
+      {id:"fideos",label:"Con fideos",items:[["pechuga",190],["fideos",145],["aceite",1]]},
+      {id:"jurel",label:"Jurel con papas",items:[["jurel",230],["papas",250],["aceite",0.5]]}
+    ]}
   ]
 };
 const DEFAULT_CONFIG = {
@@ -261,8 +338,9 @@ function fitDay(){
     const k=Math.max(0,Math.min(maxK,(part+(target-tot))/part));
     items.forEach(it=>{const f=food(it.f),nq=roundQty(f,it.q*k);if(nq!==it.q){changes.push(short(f.name)+' '+f1(it.q)+'→'+f1(nq)+' '+f.unit);it.q=nq}});
   };
-  scale(f=>f.cat==="carbo"&&!FIXED[f.id],"c",t.c,2.5);
-  scale(f=>f.cat==="prote"&&!FIXED[f.id],"p",t.p,2);
+  const byWeight=f=>(f.unit==="g"||f.unit==="ml")&&!FIXED[f.id];
+  scale(f=>f.cat==="carbo"&&byWeight(f),"c",t.c,2.5);
+  scale(f=>f.cat==="prote"&&byWeight(f),"p",t.p,2);
   scale(f=>f.id==="aceite","g",t.g,2);
   if(!changes.length){toast("Lo que queda ya calza con tu meta.");return}
   touch(S.date);render();buzz();
