@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.2.1";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -553,9 +553,9 @@ function advice(){
   if(recent.length<2||(parseISO(recent[recent.length-1].d)-parseISO(recent[0].d))/864e5<10)
     return{cls:"",html:"Necesito al menos 2 semanas de pesajes para decirte si vas al ritmo correcto. Pésate los lunes a las 6:00, antes de comer, en la misma pesa del gym."};
   const s=slope(recent),cur=recent[recent.length-1].v,pct=-s/cur*100;
-  if(-s<0.3)return{cls:"warn",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Es menos de lo esperado.",act:-40,actLbl:"Quitar 40 g de carbos por día"};
-  if(-s>1)return{cls:"warn",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Es muy rápido y arriesgas músculo.",act:40,actLbl:"Sumar 40 g de carbos por día"};
-  return{cls:"ok",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Vas en el rango correcto: no cambies nada."};
+  if(-s<0.6)return{cls:"warn",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Para llegar a febrero conviene entre 0,7 y 0,9 kg por semana.",act:-40,actLbl:"Quitar 40 g de carbos por día"};
+  if(-s>1)return{cls:"warn",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Es más de 1 kg por semana: muy rápido, arriesgas músculo.",act:40,actLbl:"Sumar 40 g de carbos por día"};
+  return{cls:"ok",html:"Estás bajando <b>"+f1(-s)+" kg por semana</b> ("+f1(pct)+"% de tu peso). Vas en el rango para febrero: no cambies nada."};
 }
 function adherence(){
   let done=0,total=0;for(let i=0;i<7;i++){const ds=addDays(todayISO(),-i),d=S.days[ds];if(d&&d.t){const ms=d.meals.filter(m=>!m.extra);total+=ms.length;done+=ms.filter(m=>m.done).length}}
