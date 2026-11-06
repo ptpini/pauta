@@ -1,5 +1,5 @@
 /* Pauta — service worker: guarda la app en el celular para que abra sin internet. */
-const VERSION = "pauta-v1.2.0";
+const VERSION = "pauta-v1.2.1";
 const ASSETS = [
   "./",
   "./index.html",
