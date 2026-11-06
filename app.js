@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -76,6 +76,8 @@ const BUILTIN = [
   {id:"empanada",name:"Empanada de pino (estimado)",cat:"otro",unit:"unid",base:1,def:1,p:20,c:50,g:28},
   {id:"pizza",name:"Pizza, 1 trozo (estimado)",cat:"otro",unit:"trozo",base:1,def:2,p:12,c:33,g:10},
   {id:"sushi",name:"Sushi, 10 piezas (estimado)",cat:"otro",unit:"porción",base:1,def:1,p:14,c:75,g:7},
+  {id:"ciabatta",name:"Ciabatta Castaño (unidad ~110 g, estimado)",cat:"carbo",unit:"unid",base:1,def:1,p:9.7,c:55,g:3.9},
+  {id:"cacao",name:"Cacao amargo en polvo (cda 5 g)",cat:"otro",unit:"cda",base:1,def:1,p:1,c:0.6,g:0.7},
   {id:"hamburguesa",name:"Hamburguesa con papas fritas (estimado)",cat:"otro",unit:"combo",base:1,def:1,p:35,c:110,g:45}
 ];
 const CAT_LABEL = {prote:"Proteína",carbo:"Carbo",grasa:"Grasa",otro:"Otro"};
@@ -97,7 +99,14 @@ const CEN_ENTRENO = [
 ];
 const TEMPLATES = {
   semana:[
-    {key:"des",name:"Desayuno",time:"8:00 · trabajo",items:[["leche",400],["avena",60]]},
+    {key:"des",name:"Desayuno",time:"8:00 · trabajo",options:[
+      {id:"base",label:"Leche con avena",items:[["leche",400],["avena",60]]},
+      {id:"ciabatta",label:"Ciabatta jamón y queso",items:[["ciabatta",1],["jamon_cerdo",2],["queso",2]]},
+      {id:"overnight",label:"Avena choco-frutilla",items:[["avena",50],["leche",300],["yogur_sp",1],["cacao",1],["frutillas",100]]},
+      {id:"batido",label:"Batido choco-plátano",items:[["leche",400],["avena",30],["platano",1],["cacao",1]]},
+      {id:"sandwich",label:"Sándwich proteico",items:[["pan",3],["huevo_duro",2],["jamon_pavo",3],["queso_light",1],["tomate",1]]},
+      {id:"wrap",label:"Wrap quesillo-jamón",items:[["tortilla",2],["quesillo_l",100],["jamon_pavo",4],["palta",30]]}
+    ]},
     {key:"alm",name:"Almuerzo",time:"11:00",note:"Verduras a gusto",options:ALM_ENTRENO},
     {key:"pre",name:"Pre-entreno",time:"1:15 pm",items:[["leche",400],["avena",20],["platano",1]]},
     {key:"post",name:"Post-entreno",time:"Al terminar en el gym",items:[["leche",200],["scoop",1]]},
@@ -118,7 +127,10 @@ const TEMPLATES = {
       {id:"jurel",label:"Jurel con pan",items:[["jurel",100],["pan",3],["tomate",1],["manzana",1]]},
       {id:"quesillo",label:"Quesillo con pan",items:[["quesillo_l",150],["pan",3],["manzana",1]]},
       {id:"jamonqueso",label:"Jamón y queso",items:[["pan",3],["jamon_pavo",4],["queso_light",2],["manzana",1]]},
-      {id:"palta",label:"Palta, huevo y jamón",items:[["pan",3],["palta",40],["huevo_duro",2],["jamon_pavo",3],["manzana",1]]}
+      {id:"palta",label:"Palta, huevo y jamón",items:[["pan",3],["palta",40],["huevo_duro",2],["jamon_pavo",3],["manzana",1]]},
+      {id:"yogurthuevo",label:"Yogurt, frutillas y huevo",items:[["yogur_sp",2],["avena",40],["frutillas",150],["huevo_duro",1]]},
+      {id:"wrap",label:"Wrap quesillo-jamón",items:[["tortilla",2],["quesillo_l",100],["jamon_pavo",4],["palta",30]]},
+      {id:"ciabatta",label:"Ciabatta jamón y queso",items:[["ciabatta",1],["jamon_cerdo",2],["queso",2]]}
     ]},
     {key:"alm",name:"Almuerzo",time:"10:30 – 11:30",note:"Verduras a gusto",options:[
       {id:"arroz",label:"Con arroz",items:[["pechuga",170],["arroz",130],["aceite",1]]},
