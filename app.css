@@ -149,6 +149,14 @@ input,select{font-size:16px} /* evita el zoom automático en iPhone */
 .swap{font-size:13px;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:3px 6px;max-width:160px;color:var(--muted)}
 .meal-f{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px 8px 14px;background:var(--surface-2);font-size:13px;flex-wrap:wrap}
 
+/* ---------- Cardio ---------- */
+.cardio{display:flex;flex-direction:column;gap:10px}
+.cardio-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.cardio-h h3{font-size:20px;font-weight:700}
+.cardio-h span{font-family:var(--display);font-weight:700;color:var(--accent)}
+.cardio .opts{padding:0;margin:0 -2px}
+.cardio-row{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;align-items:end}
+
 /* ---------- Hojas (modales) ---------- */
 .sheet-bg{position:fixed;inset:0;background:rgba(8,12,16,.48);z-index:20;display:flex;align-items:flex-end;justify-content:center;animation:fade .18s ease}
 .sheet{background:var(--surface);width:100%;max-width:720px;max-height:90dvh;overflow:auto;overscroll-behavior:contain;border-radius:22px 22px 0 0;
