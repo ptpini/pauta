@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "1.2.1";
+const APP_VERSION = "1.3.0";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -233,6 +233,19 @@ function short(name){return name.split(" (")[0]}
 
 /* ================= Días ================= */
 function typeFor(date){const d=S.days[date];if(d&&d.type)return d.type;return S.config.weekMap[parseISO(date).getDay()]||"semana"}
+/* Cardio: gasto neto = (MET - 1) x kg x minutos / 60. Se devuelve una parte en carbos. */
+const CARDIO={
+  no:{label:"Sin cardio",met:0},
+  cam:{label:"Caminadora",met:3.8,hint:"unos 5 km/h, sin inclinación"},
+  inc:{label:"Caminadora inclinada",met:6.5,hint:"unos 5 km/h con 8 a 12 % de inclinación"},
+  bicih:{label:"Bici intervalos",met:8,hint:"intervalos fuertes con descansos"},
+  bici:{label:"Bici suave",met:5,hint:"ritmo constante y cómodo"}
+};
+function bodyWeight(){const a=(S.progress.entries||[]).filter(e=>e.w).sort((x,y)=>x.d.localeCompare(y.d));return a.length?a[a.length-1].w:(S.config.cardioWeight||87)}
+function cardioInfo(d){const c=d&&d.cardio;if(!c||!CARDIO[c.type]||c.type==="no")return{net:0,extraC:0};
+  const min=Math.max(0,Math.min(180,Number(c.min)||0)),net=Math.round((CARDIO[c.type].met-1)*bodyWeight()*min/60);
+  const back=S.config.cardioBack==null?0.5:S.config.cardioBack;return{net,extraC:Math.round(net*back/4),min}}
+function targetForDay(d){const t=targetFor(d.type),x=cardioInfo(d).extraC;const c=t.c+x;return{p:t.p,c,g:t.g,kcal:t.p*4+c*4+t.g*9}}
 function targetFor(type){const t=S.config.targets[type]||DEFAULT_CONFIG.targets[type];const c=Math.max(0,t.c+(S.config.carbAdjust||0));return{p:t.p,c,g:t.g,kcal:t.p*4+c*4+t.g*9}}
 function tplOptions(m){return m.options||[{id:"base",label:"",items:m.items}]}
 function itemsFrom(list){return list.map(([f,q])=>({id:uid(),f,q}))}
@@ -304,7 +317,7 @@ function weekStrip(date){
 }
 function equiv(it,o){const f=food(it.f);const key=f.cat==="carbo"?"c":"p";const val=macro(it)[key];if(!o[key])return 0;return roundQty(o,val/o[key]*o.base)}
 function renderHoy(){
-  const d=dayDoc(S.date),type=d.type,t=targetFor(type);
+  const d=dayDoc(S.date),type=d.type,t=targetForDay(d);
   const all=sum(d.meals.map(mealMacro)),eat=sum(d.meals.filter(m=>m.done).map(mealMacro));
   let h='<div class="daynav"><button class="iconbtn" type="button" data-nav="-1" aria-label="Día anterior">'+I.left+'</button><div class="mid">'+
     '<select class="typesel '+type+'" id="typeSel" aria-label="Tipo de día">'+Object.keys(TYPES).map(k=>'<option value="'+k+'"'+(k===type?' selected':'')+'>'+TYPES[k].label+'</option>').join("")+'</select></div>'+
@@ -315,9 +328,27 @@ function renderHoy(){
   h+='<div class="actions two"><button class="btn primary" type="button" id="fitBtn">'+I.wand+' Cuadrar el día</button><button class="btn" type="button" id="extraBtn">'+I.plus+' Comí algo fuera</button></div>';
   h+='<div class="quick"><button type="button" class="pill" id="creaBtn" aria-pressed="'+(!!d.creatina)+'">'+(d.creatina?'✓ ':'')+'Creatina 5 g</button>'+
     '<span class="water">Agua <b class="num">'+(d.agua||0)+'/12</b><button type="button" data-water="-1" aria-label="Un vaso menos">−</button><button type="button" data-water="1" aria-label="Un vaso más">+</button></span></div>';
+  h+=cardioCard(d);
   d.meals.forEach(m=>{h+=mealCard(d,m)});
   h+='<button class="btn ghost" type="button" id="resetDay">Volver a la pauta original de este día</button>';
   return h;
+}
+function cardioCard(d){
+  const c=d.cardio||{type:"no",min:20},ci=cardioInfo(d),back=S.config.cardioBack==null?0.5:S.config.cardioBack;
+  let h='<section class="card cardio"><div class="cardio-h"><h3>Cardio de hoy</h3>'+(ci.net?'<span class="num">~'+fmt(ci.net)+' kcal</span>':'')+'</div>'+
+    '<div class="opts" role="group" aria-label="Tipo de cardio">'+Object.keys(CARDIO).map(k=>'<button type="button" data-cardio="'+k+'" aria-pressed="'+(c.type===k)+'">'+CARDIO[k].label+'</button>').join("")+'</div>';
+  if(c.type!=="no"&&CARDIO[c.type]){
+    h+='<div class="cardio-row"><label class="field">Minutos<input id="cardioMin" class="num" inputmode="numeric" enterkeyhint="done" value="'+(c.min||20)+'"></label><p class="note">'+esc(cap(CARDIO[c.type].hint))+'. Calculado con tu peso de '+f1(bodyWeight())+' kg.</p></div>'+
+      '<p class="note">'+(back>0?'Gastaste unas <b class="num">'+fmt(ci.net)+' kcal</b>. Te devuelvo '+(back===1?'todo':back===0.5?'la mitad':Math.round(back*100)+' %')+': <b class="num">+'+ci.extraC+' g de carbos</b>, repartidos en las comidas que te quedan.':'Gastaste unas <b class="num">'+fmt(ci.net)+' kcal</b>. No te devuelvo calorías (lo cambias en Ajustes): todo va a tu déficit.')+'</p>';
+  }else h+='<p class="note">Si hiciste caminadora o bici, márcalo y la app reajusta las comidas que te quedan.</p>';
+  return h+'</section>';
+}
+function setCardio(type,min){
+  const d=dayDoc(S.date),before=clone(d),prev=d.cardio||{type:"no",min:20};
+  d.cardio={type,min:min!=null?min:(prev.min||20)};touch(S.date);
+  const ci=cardioInfo(d);
+  if(d.meals.some(m=>!m.done))fitDay(true,before,type==="no"?"Sin cardio: volví tus carbos a la meta normal":"Cardio ~"+fmt(ci.net)+" kcal: +"+ci.extraC+" g de carbos");
+  else{render();toast("Cardio anotado. Ya marcaste todas tus comidas, así que no hay nada que reajustar.")}
 }
 function mealCard(d,m){
   const mm=mealMacro(m),tm=tplMeal(d,m),opts=tm&&tm.options?tm.options:null;
@@ -338,8 +369,8 @@ function mealCard(d,m){
 }
 function findItem(d,ref){const [mid,iid]=ref.split("|");const m=d.meals.find(x=>x.id===mid);return{m,it:m&&m.items.find(x=>x.id===iid)}}
 
-function fitDay(){
-  const d=dayDoc(S.date),t=targetFor(d.type),before=clone(d);
+function fitDay(fromCardio,prevState,label){
+  const d=dayDoc(S.date),t=targetForDay(d),before=prevState||clone(d);
   const open=d.meals.filter(m=>!m.done);if(!open.length){toast("Ya marcaste todas las comidas de este día.");return}
   const changes=[];
   const FIXED={leche:1,scoop:1,yogur_sp:1,huevo:1,platano:1,pan:1};
@@ -354,9 +385,10 @@ function fitDay(){
   scale(f=>f.cat==="carbo"&&byWeight(f),"c",t.c,2.5);
   scale(f=>f.cat==="prote"&&byWeight(f),"p",t.p,2);
   scale(f=>f.id==="aceite","g",t.g,2);
-  if(!changes.length){toast("Lo que queda ya calza con tu meta.");return}
+  const undo=()=>{S.days[S.date]=before;touch(S.date);render()};
+  if(!changes.length){render();toast(fromCardio?(label+". Lo que queda ya calza."):"Lo que queda ya calza con tu meta.",fromCardio?undo:null);return}
   touch(S.date);render();buzz();
-  toast("Ajusté: "+changes.slice(0,3).join(", ")+(changes.length>3?"…":""),()=>{S.days[S.date]=before;touch(S.date);render()});
+  toast((fromCardio?label+". ":"")+"Ajusté: "+changes.slice(0,3).join(", ")+(changes.length>3?"…":""),undo);
 }
 
 /* ================= Selector de alimentos ================= */
@@ -601,6 +633,10 @@ function renderAjustes(){
   h+='<div class="sec-title">Tu semana</div><div class="list">'+[1,2,3,4,5,6,0].map(i=>'<div class="row"><div class="lbl"><b>'+cap(WD_LONG[i])+'</b></div><select data-wd="'+i+'" aria-label="Tipo de día para el '+WD_LONG[i]+'">'+Object.keys(TYPES).map(k=>'<option value="'+k+'"'+(cfg.weekMap[i]===k?' selected':'')+'>'+TYPES[k].short+'</option>').join("")+'</select></div>').join("")+'</div>';
   h+='<div class="sec-title">Ajuste de carbos</div><div class="card"><p class="note" style="margin-bottom:10px">Lo cambia Progreso según cómo bajas de peso. Ahora: <b class="num">'+((cfg.carbAdjust||0)>0?'+':'')+(cfg.carbAdjust||0)+' g por día</b>.</p><div class="actions"><button class="btn" type="button" data-adjset="-40">−40 g</button><button class="btn" type="button" data-adjset="40">+40 g</button><button class="btn ghost" type="button" data-adjset="reset">Volver a 0</button></div>'+
     ((cfg.adjustLog||[]).length?'<ul class="note" style="margin:10px 0 0;padding-left:18px">'+cfg.adjustLog.slice(-5).reverse().map(l=>'<li>'+esc(l)+'</li>').join("")+'</ul>':'')+'</div>';
+  const cb=cfg.cardioBack==null?0.5:cfg.cardioBack;
+  h+='<div class="sec-title">Cardio</div><div class="list"><div class="row"><div class="lbl"><b>Calorías del cardio que te devuelvo</b><span>En carbos, el mismo día</span></div><select id="cardioBack">'+[[0,"Nada"],[0.5,"La mitad (recomendado)"],[1,"Todo"]].map(([v,l])=>'<option value="'+v+'"'+(cb===v?' selected':'')+'>'+l+'</option>').join("")+'</select></div>'+
+    '<div class="row"><div class="lbl"><b>Peso para calcular el cardio</b><span>Se usa tu último pesaje; sin pesajes, este</span></div><input id="cardioWeight" class="num" inputmode="decimal" style="width:80px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);text-align:right" value="'+f1(cfg.cardioWeight||87)+'"></div></div>'+
+    '<p class="note" style="margin:6px 2px 0">Los relojes y máquinas suelen sobrestimar el gasto; por eso por defecto se devuelve solo la mitad.</p>';
   h+='<div class="sec-title">Lector de etiquetas</div><div class="card"><p class="note" style="margin-bottom:10px">Lee la foto de la tabla nutricional con Claude. Necesita una clave de la API de Anthropic (se crea en console.anthropic.com → API Keys; cada lectura cuesta muy poco). La clave queda solo en este celular y no va en los respaldos.</p>'+
     '<label class="field">Clave de API<input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" value="'+esc(S.settings.apiKey)+'"></label>'+
     '<label class="field" style="margin-top:10px">Modelo<input id="apiModel" autocomplete="off" spellcheck="false" value="'+esc(S.settings.model)+'"></label>'+
@@ -675,6 +711,7 @@ document.addEventListener("click",e=>{
   if(ds.delmeal){const d=dayDoc(S.date),before=clone(d);d.meals=d.meals.filter(x=>x.id!==ds.delmeal);touch(S.date);render();toast("Comida quitada.",()=>{S.days[S.date]=before;touch(S.date);render()});return}
   if(ds.water){const d=dayDoc(S.date);d.agua=Math.max(0,Math.min(12,(d.agua||0)+Number(ds.water)));touch(S.date);render();return}
   if(ds.ff){foodFilter=ds.ff;render();return}
+  if(ds.cardio){const d=dayDoc(S.date);if((d.cardio&&d.cardio.type)===ds.cardio)return;setCardio(ds.cardio);return}
   if(ds.editfood){foodSheet(ds.editfood);return}
   if(ds.delentry){const keep=clone(S.progress);S.progress.entries=(S.progress.entries||[]).filter(x=>x.d!==ds.delentry);persist();render();toast("Registro borrado.",()=>{S.progress=keep;persist();render()});return}
   if(b.id==="applyAdj"||ds.adjset){const val=ds.adj||ds.adjset,cfg=S.config;cfg.adjustLog=cfg.adjustLog||[];
@@ -715,6 +752,9 @@ document.addEventListener("change",e=>{
   if(el.dataset.wd){S.config.weekMap[el.dataset.wd]=el.value;Object.keys(S.days).forEach(k=>{if(!S.days[k].t)delete S.days[k]});persist();toast(cap(WD_LONG[el.dataset.wd])+": "+TYPES[el.value].label.toLowerCase()+". Aplica a los días que aún no tocas.");return}
   if(el.dataset.target){render();return}
   if(el.id==="themeSel"){S.settings.theme=el.value;saveSettings();applyTheme();return}
+  if(el.id==="cardioMin"){const v=Math.round(num(el.value)||0);const d=dayDoc(S.date);if(d.cardio&&v!==d.cardio.min)setCardio(d.cardio.type,Math.max(0,Math.min(180,v)));return}
+  if(el.id==="cardioBack"){S.config.cardioBack=Number(el.value);persist();toast("Listo. Aplica a los días en que marques cardio.");return}
+  if(el.id==="cardioWeight"){const v=num(el.value);if(v&&v>35&&v<250){S.config.cardioWeight=v;persist()}return}
   if(el.id==="impFile"&&el.files&&el.files[0]){importBackup(el.files[0]);el.value="";return}
   if(el.dataset.qty){render();return}
 });
