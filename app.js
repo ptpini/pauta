@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "2.0.1";
+const APP_VERSION = "2.0.2";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -698,7 +698,8 @@ function offToFood(p){const n=p.nutriments||{},P=nn(n.proteins_100g),C=nn(n.carb
   return{name:name.slice(0,60),cat:top<12?"otro":top===P*4?"prote":top===C*4?"carbo":"grasa",unit:"g",base:100,def:sq&&sq>0?sq:100,p:r1(P),c:r1(C),g:r1(G),code:String(p.code||""),src:"off"}}
 async function offGet(url){let r;try{r=await fetch(url)}catch(e){throw{code:"offline"}}if(r.status===404)return null;if(!r.ok)throw{code:"busy"};return r.json()}
 async function offByCode(code){const j=await offGet(OFF+"/api/v2/product/"+encodeURIComponent(code)+".json?fields="+OFF_F);return j&&j.product?offToFood(Object.assign({},j.product,{code})):null}
-function offSearch(q){return new Promise((ok,no)=>{const cb="__off"+uid(),s=document.createElement("script"),end=()=>{clearTimeout(t);delete window[cb];s.remove()},t=setTimeout(()=>{end();no({code:"busy"})},20000);
+function offSearch(q){return offSearch1(q).catch(e=>e&&e.code==="busy"?new Promise(r=>setTimeout(r,3000)).then(()=>offSearch1(q)):Promise.reject(e))}
+function offSearch1(q){return new Promise((ok,no)=>{const cb="__off"+uid(),s=document.createElement("script"),end=()=>{clearTimeout(t);delete window[cb];s.remove()},t=setTimeout(()=>{end();no({code:"busy"})},20000);
   window[cb]=j=>{end();ok(((j&&j.products)||[]).map(offToFood).filter(Boolean))};s.onerror=()=>{end();no({code:navigator.onLine===false?"offline":"busy"})};
   s.src=OFF+"/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&tagtype_0=countries&tag_contains_0=contains&tag_0=chile&sort_by=unique_scans_n&json=1&jsonp="+cb+"&page_size=24&fields="+OFF_F;document.head.appendChild(s)})}
 function saveOff(f){const ex=Object.values(S.custom).find(x=>x.code&&x.code===f.code&&!x.temp);if(ex)return ex;const nf=Object.assign({id:"c_"+uid()},f);S.custom[nf.id]=nf;persist();askPersistent();return nf}
@@ -732,7 +733,7 @@ function onlineSheet(q0,onFood){
       try{last=await offSearch(q);
         res.innerHTML=last.length?'<div class="flist">'+last.map((f,i)=>'<button type="button" data-on="'+i+'"><span>'+esc(f.name)+' <span class="cat '+f.cat+'">'+CAT_LABEL[f.cat]+'</span></span><small class="num">100 g: P'+f1(f.p)+' C'+f1(f.c)+' G'+f1(f.g)+'</small></button>').join("")+'</div>':'<p class="note">Sin resultados. Prueba otra palabra, escanea el código o usa la foto de la etiqueta.</p>';
         res.querySelectorAll("[data-on]").forEach(b=>b.onclick=()=>{const f=saveOff(last[b.dataset.on]);closeSheet();if(onFood)onFood(f);else{render();toast("Agregado a tus alimentos: "+short(f.name))}})}
-      catch(e){res.innerHTML='<p class="note">'+(e&&e.code==="offline"?"Sin conexión a internet.":"La base de productos no respondió. Prueba de nuevo.")+'</p>'}};
+      catch(e){res.innerHTML='<p class="note">'+(e&&e.code==="offline"?"Sin conexión a internet.":"La base de productos está ocupada. Espera un minuto y prueba de nuevo.")+'</p>'}};
     h.querySelector("#onGo").onclick=go;inp.onkeydown=e=>{if(e.key==="Enter")go()};
     h.querySelector("#onX").onclick=closeSheet;h.querySelector("#onScan").onclick=()=>{closeSheet();scanSheet(onFood)};
     if(q0)go();
