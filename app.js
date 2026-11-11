@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "1.3.0";
+const APP_VERSION = "2.0.0";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -265,7 +265,7 @@ function toast(msg,undoFn){
   if(undoFn)document.getElementById("undoBtn").onclick=()=>{undoFn();h.innerHTML=""};
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>{h.innerHTML=""},undoFn?7000:3200);
 }
-function closeSheet(){document.getElementById("sheetHost").innerHTML="";document.body.style.overflow=""}
+function closeSheet(){if(S.scanStop){const f=S.scanStop;S.scanStop=null;f()}document.getElementById("sheetHost").innerHTML="";document.body.style.overflow=""}
 function openSheet(html,bind){
   const h=document.getElementById("sheetHost");
   h.innerHTML='<div class="sheet-bg" id="sheetBg"><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>'+html+'</div></div>';
@@ -330,6 +330,7 @@ function renderHoy(){
     '<span class="water">Agua <b class="num">'+(d.agua||0)+'/12</b><button type="button" data-water="-1" aria-label="Un vaso menos">−</button><button type="button" data-water="1" aria-label="Un vaso más">+</button></span></div>';
   h+=cardioCard(d);
   d.meals.forEach(m=>{h+=mealCard(d,m)});
+  h+='<button class="btn ghost" type="button" id="copyY">Copiar lo del día anterior</button>';
   h+='<button class="btn ghost" type="button" id="resetDay">Volver a la pauta original de este día</button>';
   return h;
 }
@@ -363,7 +364,7 @@ function mealCard(d,m){
       swap='<select class="swap" data-swap="'+m.id+'|'+it.id+'" aria-label="Cambiar '+esc(f.name)+' por otro alimento"><option value="">Cambiar por…</option>'+os.map(o=>'<option value="'+o.id+'">'+esc(short(o.name))+' · '+f1(equiv(it,o))+' '+esc(o.unit)+'</option>').join("")+'</select>'}
     h+='<div class="item"><div class="nm">'+esc(f.name)+'</div><div class="qty"><input class="num" inputmode="decimal" enterkeyhint="done" aria-label="Cantidad de '+esc(f.name)+'" data-qty="'+m.id+'|'+it.id+'" value="'+esc(String(it.q).replace(".",","))+'"><span class="u">'+esc(f.unit)+'</span><button type="button" class="mini" data-del="'+m.id+'|'+it.id+'" aria-label="Quitar '+esc(f.name)+'">✕</button></div>'+
       '<div class="mac num"><span><span class="p">P '+f1(x.p)+'</span> · <span class="c">C '+f1(x.c)+'</span> · <span class="g">G '+f1(x.g)+'</span> · '+fmt(x.kcal)+' kcal</span>'+swap+'</div></div>'});
-  h+='</div><div class="meal-f"><span class="num"><b>'+fmt(mm.kcal)+' kcal</b> · P '+fmt(mm.p)+' · C '+fmt(mm.c)+' · G '+fmt(mm.g)+'</span><span><button type="button" class="mini" data-add="'+m.id+'">+ Agregar</button>'+
+  h+='</div><div class="meal-f"><span class="num"><b>'+fmt(mm.kcal)+' kcal</b> · P '+fmt(mm.p)+' · C '+fmt(mm.c)+' · G '+fmt(mm.g)+'</span><span><button type="button" class="mini" data-save="'+m.id+'">Guardar</button><button type="button" class="mini" data-add="'+m.id+'">+ Agregar</button>'+
     (m.extra?'<button type="button" class="mini" data-delmeal="'+m.id+'">Quitar</button>':'')+'</span></div></article>';
   return h;
 }
@@ -395,11 +396,11 @@ function fitDay(fromCardio,prevState,label){
 function pickerSheet(mealId,isExtra){
   let sel=null,mode="lista";
   const listHtml=q=>{const fs=Object.values(foods()).filter(f=>!f.temp&&f.name.toLowerCase().includes(q.toLowerCase())).sort((a,b)=>a.name.localeCompare(b.name,"es"));
-    return fs.map(f=>'<button type="button" data-pick="'+f.id+'" aria-pressed="'+(sel===f.id)+'"><span>'+esc(f.name)+' <span class="cat '+f.cat+'">'+CAT_LABEL[f.cat]+'</span></span><small class="num">'+f1(f.base)+' '+esc(f.unit)+': P'+f1(f.p)+' C'+f1(f.c)+' G'+f1(f.g)+'</small></button>').join("")||'<div class="empty">No está en tu lista. Créalo con "Manual" o con una foto de la etiqueta.</div>'};
+    return fs.map(f=>'<button type="button" data-pick="'+f.id+'" aria-pressed="'+(sel===f.id)+'"><span>'+esc(f.name)+' <span class="cat '+f.cat+'">'+CAT_LABEL[f.cat]+'</span></span><small class="num">'+f1(f.base)+' '+esc(f.unit)+': P'+f1(f.p)+' C'+f1(f.c)+' G'+f1(f.g)+'</small></button>').join("")||'<div class="empty">No está en tu lista. Búscalo en "Productos chilenos" o escanea su código de barras.</div>'};
   const html=()=>'<h2>'+(isExtra?'Comí algo fuera del plan':'Agregar alimento')+'</h2>'+
-    '<div class="seg" role="group"><button type="button" data-mode="lista" aria-pressed="'+(mode==="lista")+'">De la lista</button><button type="button" data-mode="manual" aria-pressed="'+(mode==="manual")+'">Manual</button></div>'+
-    '<button class="btn" type="button" id="pkScan">'+I.cam+' Producto nuevo: leer etiqueta con foto</button>'+
-    (mode==="lista"
+    '<div class="seg" role="group"><button type="button" data-mode="lista" aria-pressed="'+(mode==="lista")+'">Alimentos</button><button type="button" data-mode="saved" aria-pressed="'+(mode==="saved")+'">Mis comidas</button><button type="button" data-mode="manual" aria-pressed="'+(mode==="manual")+'">Manual</button></div>'+
+    '<div class="chips" role="group" aria-label="Agregar un producto nuevo"><button type="button" id="pkBar">Código de barras</button><button type="button" id="pkOn">Productos chilenos</button><button type="button" id="pkScan">Foto de etiqueta</button><button type="button" id="pkPlate">Foto del plato</button></div>'+
+    (mode==="saved"?savedHtml():mode==="lista"
       ?'<label class="field">Buscar<input id="pkQ" type="search" placeholder="pollo, arroz, burrito…" autocomplete="off"></label><div class="flist" id="pkList">'+listHtml("")+'</div><label class="field">Cantidad<input id="pkQty" inputmode="decimal" placeholder="Elige un alimento"></label>'
       :'<label class="field">Qué comiste<input id="mnName" placeholder="Ej: completo italiano"></label><div class="grid3"><label class="field">Proteína (g)<input id="mnP" inputmode="decimal"></label><label class="field">Carbos (g)<input id="mnC" inputmode="decimal"></label><label class="field">Grasa (g)<input id="mnG" inputmode="decimal"></label></div><label class="pill" style="align-self:flex-start"><input type="checkbox" id="mnSave"> Guardarlo en mis alimentos</label>')+
     '<div class="actions"><button class="btn primary" type="button" id="pkOk">Agregar</button><button class="btn" type="button" id="pkCancel">Cancelar</button></div>';
@@ -407,6 +408,11 @@ function pickerSheet(mealId,isExtra){
     host.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{mode=b.dataset.mode;host.innerHTML='<div class="grab"></div>'+html();bind(host)});
     host.querySelector("#pkCancel").onclick=closeSheet;
     host.querySelector("#pkScan").onclick=()=>{closeSheet();foodSheet(null,{scan:true,onSaved:f=>addItem(mealId,isExtra,f.id,f.def||f.base)})};
+    const onF=f=>addItem(mealId,isExtra,f.id,f.def||f.base);
+    host.querySelector("#pkBar").onclick=()=>{closeSheet();scanSheet(onF)};
+    host.querySelector("#pkOn").onclick=()=>{const q=host.querySelector("#pkQ");closeSheet();onlineSheet(q?q.value.trim():"",onF)};
+    host.querySelector("#pkPlate").onclick=()=>{closeSheet();plateSheet(f=>addItem(mealId,isExtra,f.id,1))};
+    if(mode==="saved"){host.querySelector("#pkOk").hidden=true;host.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{const sm=savedMeals().find(x=>x.id===b.dataset.sm);closeSheet();if(sm)addSaved(mealId,isExtra,sm)});return}
     if(mode==="lista"){const q=host.querySelector("#pkQ"),list=host.querySelector("#pkList"),qty=host.querySelector("#pkQty");
       const wire=()=>list.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{sel=b.dataset.pick;const f=food(sel);qty.value=String(f.def||f.base).replace(".",",");qty.placeholder=f.unit;list.querySelectorAll("[data-pick]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.pick===sel))});
       wire();q.oninput=()=>{list.innerHTML=listHtml(q.value);wire()};
@@ -456,10 +462,10 @@ function parseJSONLoose(t){
   const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a){try{return JSON.parse(t.slice(a,b+1))}catch(e){}}
   return null;
 }
-async function readLabel(images,signal){
+async function readLabel(images,signal,prompt){
   const body={model:S.settings.model||"claude-sonnet-5-5",max_tokens:900,messages:[{role:"user",content:[
     ...images.map(x=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:x.data}})),
-    {type:"text",text:LABEL_PROMPT}]}]};
+    {type:"text",text:prompt||LABEL_PROMPT}]}]};
   let res;
   try{res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal,headers:{"content-type":"application/json","x-api-key":S.settings.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)})}
   catch(e){if(e&&e.name==="AbortError")throw{code:"cancelled"};throw{code:"offline"}}
@@ -486,7 +492,7 @@ function scanToFood(r){
 
 /* ================= Ficha de alimento ================= */
 function foodSheet(id,opts){
-  opts=opts||{};const f=id?clone(S.custom[id]):{id:"c_"+uid(),name:"",cat:"prote",unit:"g",base:100,def:100,p:0,c:0,g:0};
+  opts=opts||{};const f=id?clone(S.custom[id]):{id:"c_"+uid(),name:"",cat:"prote",unit:"g",base:100,def:100,p:0,c:0,g:0};if(opts.prefill)Object.assign(f,opts.prefill);
   const hasKey=!!S.settings.apiKey;
   const scanHtml=id?'':(hasKey
     ?'<div class="scan"><label class="scanbtn">'+I.cam+' Leer etiqueta con foto<input type="file" id="scanFile" accept="image/*" multiple></label><div class="st muted" id="scanSt">Saca una foto derecha a la tabla de información nutricional (puedes sumar otra del frente). Lleno los datos y tú los revisas.</div></div>'
@@ -545,7 +551,7 @@ function foodSheet(id,opts){
 /* ================= Alimentos ================= */
 let foodFilter="todos",foodQuery="";
 function renderAlimentos(){
-  let h='<div class="actions"><button class="btn primary" type="button" id="scanFood">'+I.cam+' Leer etiqueta</button><button class="btn" type="button" id="newFood">'+I.plus+' Nuevo a mano</button></div>';
+  let h='<div class="actions two"><button class="btn primary" type="button" id="barFood">Escanear código</button><button class="btn" type="button" id="onFood">Buscar producto</button><button class="btn" type="button" id="scanFood">'+I.cam+' Leer etiqueta</button><button class="btn" type="button" id="shopBtn">Lista de compras</button></div><button class="btn ghost" type="button" id="newFood">'+I.plus+' Nuevo a mano</button>';
   h+='<div class="search"><input type="search" id="fq" placeholder="Buscar alimento" value="'+esc(foodQuery)+'" aria-label="Buscar alimento"></div>';
   h+='<div class="chips" role="group" aria-label="Filtrar">'+[["todos","Todos"],["mios","Míos"],["prote","Proteína"],["carbo","Carbos"],["grasa","Grasa"],["otro","Otros"]].map(([k,l])=>'<button type="button" data-ff="'+k+'" aria-pressed="'+(foodFilter===k)+'">'+l+'</button>').join("")+'</div>';
   h+='<div class="card" style="padding:0" id="foodList">'+foodListHtml()+'</div>';
@@ -605,6 +611,7 @@ function renderProgreso(){
      '<div><span>Comidas cumplidas</span><b class="num">'+(adh==null?'—':adh+'%')+'</b><span>últimos 7 días</span></div></div>';
   h+='<div class="advice '+a.cls+'">'+a.html+(a.act?'<div class="actions" style="margin-top:10px"><button class="btn primary" type="button" id="applyAdj" data-adj="'+a.act+'">'+a.actLbl+'</button></div>':'')+
      ((S.config.carbAdjust||0)!==0?'<p class="note" style="margin-top:8px">Ajuste de carbos activo: <b class="num">'+((S.config.carbAdjust>0)?'+':'')+S.config.carbAdjust+' g por día</b>.</p>':'')+'</div>';
+  h+=goalCard(w)+weekStats();
   h+='<div class="card chart"><h2 style="font-size:19px;margin-bottom:6px">Peso</h2>'+chart(w,"kg","var(--accent)")+'</div><div class="card chart"><h2 style="font-size:19px;margin-bottom:6px">Cintura</h2>'+chart(c,"cm","var(--fat)")+'</div>';
   if(es.length)h+='<div class="card" style="padding:6px 6px"><table class="ftable"><thead><tr><th>Fecha</th><th class="n">Peso</th><th class="n">Cintura</th><th></th></tr></thead><tbody>'+
     es.slice().reverse().map(e=>'<tr><td>'+parseISO(e.d).toLocaleDateString("es-CL",{weekday:"short",day:"numeric",month:"short"})+'</td><td class="n">'+(e.w?f1(e.w)+' kg':'—')+'</td><td class="n">'+(e.c?f1(e.c)+' cm':'—')+'</td><td class="n"><button type="button" class="mini" data-delentry="'+e.d+'">Borrar</button></td></tr>').join("")+'</tbody></table></div>';
@@ -625,6 +632,7 @@ function renderAjustes(){
     else h+='<b>Agrégala a tu pantalla de inicio</b><ol class="steps note"><li>Abre esta página en Chrome.</li><li>Toca el menú ⋮ arriba a la derecha.</li><li>Elige <b>Instalar app</b> o <b>Agregar a la pantalla principal</b>.</li></ol>';
     h+='</div>';
   }
+  h+='<div class="sec-title">Calculadora</div><div class="card"><p class="note" style="margin-bottom:10px">Calcula tus calorías y macros según tu cuerpo, tu actividad y el ritmo al que quieres bajar.</p><button class="btn primary block" type="button" id="calcBtn">Calcular mis metas</button>'+((S.config.saved||[]).length?'<button class="btn ghost block" type="button" id="clrSaved" style="margin-top:8px">Borrar comidas guardadas ('+S.config.saved.length+')</button>':'')+'</div>';
   h+='<div class="sec-title">Metas por tipo de día</div><div class="card">';
   Object.keys(TYPES).forEach((k,i)=>{const t=cfg.targets[k],tt=targetFor(k);
     h+='<h3 style="font-size:17px;margin:'+(i?14:0)+'px 0 8px">'+TYPES[k].label+' <span class="muted num" style="font-family:var(--body);font-size:13px;font-weight:500">· '+fmt(tt.kcal)+' kcal</span></h3><div class="grid3">'+
@@ -680,6 +688,148 @@ function applyTheme(){const t=S.settings.theme;if(t==="auto")document.documentEl
   const dark=t==="dark"||(t==="auto"&&matchMedia("(prefers-color-scheme: dark)").matches);
   document.querySelectorAll('meta[name="theme-color"]').forEach(m=>{m.setAttribute("content",dark?"#0F151B":"#EEF1F4");m.removeAttribute("media")});}
 
+/* ================= v2: productos chilenos, escáner, comidas guardadas, compras, metas ================= */
+const OFF="https://world.openfoodfacts.org",OFF_F="code,product_name,product_name_es,brands,nutriments,serving_quantity";
+const SPIN='<span class="spin" style="display:inline-block;vertical-align:-3px"></span> ';
+function offToFood(p){const n=p.nutriments||{},P=nn(n.proteins_100g),C=nn(n.carbohydrates_100g),G=nn(n.fat_100g);
+  if(P==null||C==null||G==null)return null;
+  const name=((p.product_name_es||p.product_name||"").trim()+" "+((p.brands||"").split(",")[0]||"").trim()).trim();if(!name)return null;
+  const top=Math.max(P*4,C*4,G*9),sq=nn(p.serving_quantity);
+  return{name:name.slice(0,60),cat:top<12?"otro":top===P*4?"prote":top===C*4?"carbo":"grasa",unit:"g",base:100,def:sq&&sq>0?sq:100,p:r1(P),c:r1(C),g:r1(G),code:String(p.code||""),src:"off"}}
+async function offGet(url){let r;try{r=await fetch(url)}catch(e){throw{code:"offline"}}if(r.status===404)return null;if(!r.ok)throw{code:"busy"};return r.json()}
+async function offByCode(code){const j=await offGet(OFF+"/api/v2/product/"+encodeURIComponent(code)+".json?fields="+OFF_F);return j&&j.product?offToFood(Object.assign({},j.product,{code})):null}
+async function offSearch(q){const j=await offGet(OFF+"/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&tagtype_0=countries&tag_contains_0=contains&tag_0=chile&sort_by=unique_scans_n&json=1&page_size=24&fields="+OFF_F);return((j&&j.products)||[]).map(offToFood).filter(Boolean)}
+function saveOff(f){const ex=Object.values(S.custom).find(x=>x.code&&x.code===f.code&&!x.temp);if(ex)return ex;const nf=Object.assign({id:"c_"+uid()},f);S.custom[nf.id]=nf;persist();askPersistent();return nf}
+function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
+function scanSheet(onFood){
+  openSheet('<h2>Escanear código de barras</h2><video id="scV" playsinline muted style="width:100%;max-height:38vh;border-radius:14px;background:#000;object-fit:cover"></video><p class="note" id="scSt">Abriendo la cámara…</p><div class="search"><input id="scCode" inputmode="numeric" placeholder="O escribe el número del código"><button class="btn primary" type="button" id="scGo">Buscar</button></div><div class="actions"><button class="btn" type="button" id="scX">Cerrar</button></div>',h=>{
+    const st=h.querySelector("#scSt"),v=h.querySelector("#scV");let stream=null,timer=null,busy=false;
+    const stop=()=>{clearInterval(timer);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null};
+    S.scanStop=stop;
+    const find=async code=>{if(busy)return;busy=true;stop();v.hidden=true;st.innerHTML=SPIN+'Buscando el producto '+esc(code)+'…';
+      try{const f=await offByCode(code);
+        if(f){closeSheet();foodSheet(null,{prefill:f,onSaved:onFood});toast("Producto encontrado. Revisa los datos y guarda.")}
+        else{st.textContent="Ese producto no está en la base o no tiene tabla nutricional. Agrégalo con una foto de la etiqueta.";busy=false}
+      }catch(e){st.textContent=e&&e.code==="offline"?"Sin conexión. El escáner necesita internet.":"La base de productos no respondió. Prueba de nuevo.";busy=false}};
+    h.querySelector("#scX").onclick=closeSheet;
+    h.querySelector("#scGo").onclick=()=>{const c=h.querySelector("#scCode").value.replace(/\D/g,"");if(c.length<8){toast("Escribe los números que están bajo el código de barras.");return}find(c)};
+    (async()=>{try{
+      if(!("BarcodeDetector" in window))await loadScript("https://cdn.jsdelivr.net/npm/barcode-detector@2.3.1/dist/iife/side-effects.js");
+      const det=new BarcodeDetector({formats:["ean_13","ean_8","upc_a","upc_e"]});
+      stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+      if(S.scanStop!==stop){stop();return}
+      v.srcObject=stream;await v.play();st.textContent="Apunta al código de barras del envase.";
+      timer=setInterval(async()=>{if(busy||v.readyState<2)return;try{const r=await det.detect(v);if(r&&r[0]&&r[0].rawValue){buzz();find(r[0].rawValue)}}catch(e){}},350);
+    }catch(e){v.hidden=true;st.textContent="No pude abrir la cámara. Escribe el número que está bajo el código de barras."}})();
+  });
+}
+function onlineSheet(q0,onFood){
+  openSheet('<h2>Productos chilenos</h2><div class="search"><input id="onQ" type="search" placeholder="Ej: yogurt protein, atún, galletas" value="'+esc(q0||"")+'"><button class="btn primary" type="button" id="onGo">Buscar</button></div><div id="onRes"><p class="note">Busca por nombre o marca en Open Food Facts, una base abierta con productos que se venden en Chile.</p></div><div class="actions"><button class="btn" type="button" id="onScan">'+I.cam+' Escanear código</button><button class="btn" type="button" id="onX">Cerrar</button></div>',h=>{
+    const res=h.querySelector("#onRes"),inp=h.querySelector("#onQ");let last=[];
+    const go=async()=>{const q=inp.value.trim();if(q.length<2)return;res.innerHTML='<p class="note">'+SPIN+'Buscando…</p>';
+      try{last=await offSearch(q);
+        res.innerHTML=last.length?'<div class="flist">'+last.map((f,i)=>'<button type="button" data-on="'+i+'"><span>'+esc(f.name)+' <span class="cat '+f.cat+'">'+CAT_LABEL[f.cat]+'</span></span><small class="num">100 g: P'+f1(f.p)+' C'+f1(f.c)+' G'+f1(f.g)+'</small></button>').join("")+'</div>':'<p class="note">Sin resultados. Prueba otra palabra, escanea el código o usa la foto de la etiqueta.</p>';
+        res.querySelectorAll("[data-on]").forEach(b=>b.onclick=()=>{const f=saveOff(last[b.dataset.on]);closeSheet();if(onFood)onFood(f);else{render();toast("Agregado a tus alimentos: "+short(f.name))}})}
+      catch(e){res.innerHTML='<p class="note">'+(e&&e.code==="offline"?"Sin conexión a internet.":"La base de productos no respondió. Prueba de nuevo.")+'</p>'}};
+    h.querySelector("#onGo").onclick=go;inp.onkeydown=e=>{if(e.key==="Enter")go()};
+    h.querySelector("#onX").onclick=closeSheet;h.querySelector("#onScan").onclick=()=>{closeSheet();scanSheet(onFood)};
+    if(q0)go();
+  });
+}
+const PLATE_PROMPT='Eres nutricionista. La foto muestra un plato o comida. Estima con criterio las porciones y los macros totales de lo que se ve. Responde solo con un objeto JSON, sin texto antes ni después: {"es_comida": true, "nombre": "nombre corto del plato en español", "items": [{"nombre": "alimento", "gramos": número}], "proteinas": número, "carbohidratos": número, "grasas": número, "confianza": "alta" | "media" | "baja"}. Los macros van en gramos totales. Si la foto no muestra comida, responde {"es_comida": false}.';
+function plateSheet(onFood){
+  if(!S.settings.apiKey){toast("La foto del plato usa tu clave de Anthropic. Agrégala en Ajustes → Lector de etiquetas.");return}
+  openSheet('<h2>Foto del plato</h2><div class="scan"><label class="scanbtn">'+I.cam+' Sacar o elegir foto<input type="file" id="plF" accept="image/*"></label><div class="st muted" id="plSt">Saca la foto desde arriba, con todo el plato a la vista. Es una estimación, pensada para cuando comes fuera.</div></div><div class="actions"><button class="btn" type="button" id="plX">Cerrar</button></div>',h=>{
+    const st=h.querySelector("#plSt"),fi=h.querySelector("#plF");h.querySelector("#plX").onclick=closeSheet;
+    fi.onchange=async()=>{const file=fi.files&&fi.files[0];fi.value="";if(!file)return;
+      st.className="st";st.innerHTML='<span class="spin"></span><span>Estimando el plato…</span>';
+      const img=await toJpeg(file);if(!img){st.textContent="No pude abrir esa foto. Prueba con otra.";return}
+      try{const r=await readLabel([img],undefined,PLATE_PROMPT);
+        if(!r||r.es_comida===false||nn(r.proteinas)==null){st.textContent="No reconozco comida en esa foto. Prueba con otra.";return}
+        const f={id:"c_"+uid(),name:String(r.nombre||"Plato").slice(0,50)+" (foto)",cat:"otro",unit:"porción",base:1,def:1,p:r1(nn(r.proteinas)||0),c:r1(nn(r.carbohidratos)||0),g:r1(nn(r.grasas)||0),temp:true};
+        const items=(Array.isArray(r.items)?r.items:[]).slice(0,6).map(x=>esc(x.nombre)+" ~"+fmt(nn(x.gramos)||0)+" g").join(" · ");
+        st.innerHTML='<div style="display:flex;flex-direction:column;gap:6px;width:100%"><b>'+esc(f.name)+'</b><span class="num">P '+f1(f.p)+' · C '+f1(f.c)+' · G '+f1(f.g)+' · '+fmt(f.p*4+f.c*4+f.g*9)+' kcal</span>'+(items?'<span class="muted">'+items+'</span>':'')+'<span class="muted">Confianza '+esc(r.confianza||"media")+'. Puede variar ±25 %.</span><button class="btn primary" type="button" id="plOk">Agregar a la comida</button></div>';
+        h.querySelector("#plOk").onclick=()=>{S.custom[f.id]=f;persist();closeSheet();onFood(f)};
+      }catch(e){st.textContent=SCAN_ERR[e&&e.code]||SCAN_ERR.other}};
+  });
+}
+/* ---- comidas guardadas ---- */
+function savedMeals(){return S.config.saved||(S.config.saved=[])}
+function savedHtml(){const L=savedMeals();if(!L.length)return'<div class="empty">Todavía no guardas comidas. Toca "Guardar" en cualquier comida de tu día para repetirla después con un toque.</div>';
+  return'<div class="flist">'+L.map(sm=>{const mm=sum(sm.items.map(([f,q])=>macro({f,q})));return'<button type="button" data-sm="'+sm.id+'"><span>'+esc(sm.name)+'</span><small class="num">'+fmt(mm.kcal)+' kcal · P'+fmt(mm.p)+' C'+fmt(mm.c)+' G'+fmt(mm.g)+'</small></button>'}).join("")+'</div><p class="note">Para vaciar esta lista, usa "Borrar comidas guardadas" en Ajustes.</p>'}
+function addSaved(mealId,isExtra,sm){const d=dayDoc(S.date);let m;
+  if(isExtra){m={id:uid(),key:"extra",name:sm.name,time:"",done:true,extra:true,items:[]};d.meals.push(m)}else m=d.meals.find(x=>x.id===mealId);
+  if(!m)return;sm.items.forEach(([f,q])=>m.items.push({id:uid(),f,q}));touch(S.date);render();toast(sm.name+": agregada.")}
+function saveMealSheet(mealId){const d=dayDoc(S.date),m=d.meals.find(x=>x.id===mealId);if(!m||!m.items.length){toast("Esa comida no tiene alimentos.");return}
+  const tm=tplMeal(d,m),o=tm&&tm.options&&tm.options.find(x=>x.id===m.opt);
+  openSheet('<h2>Guardar comida</h2><label class="field">Nombre<input id="svN" value="'+esc(o&&o.label?o.label:m.name)+'"></label><p class="note">Queda en "Mis comidas" al agregar alimentos, con estas cantidades.</p><div class="actions"><button class="btn primary" type="button" id="svOk">Guardar</button><button class="btn" type="button" id="svX">Cancelar</button></div>',h=>{
+    h.querySelector("#svX").onclick=closeSheet;
+    h.querySelector("#svOk").onclick=()=>{const name=h.querySelector("#svN").value.trim()||m.name;m.items.forEach(it=>{const f=S.custom[it.f];if(f&&f.temp)delete f.temp});
+      savedMeals().push({id:uid(),name,items:m.items.map(it=>[it.f,it.q])});persist();closeSheet();toast('"'+name+'" guardada en Mis comidas.')}})}
+function copyYesterday(){const y=S.days[addDays(S.date,-1)];if(!y||!y.t){toast("No hay nada anotado el día anterior.");return}
+  confirmSheet("Copiar el día anterior","Se reemplazan las comidas de este día por las del día anterior, sin marcar.","Copiar",false,()=>{const before=S.days[S.date]?clone(S.days[S.date]):null,d=clone(y);
+    d.date=S.date;d.creatina=false;d.agua=0;delete d.cardio;d.meals.forEach(m=>{m.id=uid();m.done=false;m.items.forEach(it=>it.id=uid())});
+    S.days[S.date]=d;touch(S.date);render();toast("Día copiado.",()=>{if(before)S.days[S.date]=before;else delete S.days[S.date];persist();render()})})}
+/* ---- lista de compras ---- */
+const RAW={pechuga:[1.35,"crudo"],trutro:[1.5,"crudo, con hueso"],arroz:[0.36,"crudo"],arroz_int:[0.4,"crudo"],fideos:[0.42,"secos"],fideos_int:[0.42,"secos"],lentejas:[0.4,"secas"],porotos:[0.4,"secos"],garbanzos:[0.45,"secos"],quinoa:[0.35,"cruda"],molida10:[1.3,"cruda"],molida5:[1.3,"cruda"],merluza:[1.25,"crudo"],salmon:[1.2,"crudo"],chuleta:[1.4,"cruda"]};
+function shopList(n){const tot={};
+  for(let i=0;i<n;i++){const ds=addDays(todayISO(),i),d=S.days[ds]||buildDay(ds,typeFor(ds));d.meals.forEach(m=>{if(m.extra)return;m.items.forEach(it=>{tot[it.f]=(tot[it.f]||0)+(Number(it.q)||0)})})}
+  return Object.keys(tot).filter(id=>!food(id).temp&&tot[id]>0).map(id=>{const f=food(id);let q=tot[id],note="";if(RAW[id]){q*=RAW[id][0];note=RAW[id][1]}
+    const u=f.unit,txt=(u==="g"||u==="ml")?(q>=1000?f1(q/1000)+(u==="g"?" kg":" L"):fmt(Math.ceil(q/10)*10)+" "+u):f1(Math.ceil(q))+" "+u;
+    return{id,cat:f.cat,name:RAW[id]?short(f.name).replace(/ cocid[oa]s?/,""):short(f.name),txt:txt+(note?" "+note:"")}}).sort((a,b)=>(a.cat+a.name).localeCompare(b.cat+b.name,"es"))}
+function shopSheet(){let n=7;const ck=S.meta.shop||(S.meta.shop={});
+  const html=()=>{const L=shopList(n);return'<h2>Lista de compras</h2><div class="seg" role="group">'+[[7,"7 días"],[14,"14 días"],[30,"30 días"]].map(([v,l])=>'<button type="button" data-n="'+v+'" aria-pressed="'+(n===v)+'">'+l+'</button>').join("")+'</div><p class="note">Sale de tu pauta desde hoy, con las opciones que tienes elegidas. Carnes, arroz, fideos y legumbres van en peso crudo.</p><ul class="flt" style="border:1px solid var(--line);border-radius:14px">'+L.map(x=>'<li><input type="checkbox" data-ck="'+x.id+'"'+(ck[x.id]?' checked':'')+' style="width:22px;height:22px;flex:none" aria-label="Comprado: '+esc(x.name)+'"><span class="dot '+x.cat+'"></span><div class="info"><b>'+esc(x.name)+'</b></div><div class="kc num" style="font-size:15px">'+esc(x.txt)+'</div></li>').join("")+'</ul><div class="actions"><button class="btn primary" type="button" id="shCopy">'+I.out+' Compartir lista</button><button class="btn" type="button" id="shClr">Desmarcar todo</button><button class="btn" type="button" id="shX">Cerrar</button></div>'};
+  const bind=h=>{
+    h.querySelectorAll("[data-n]").forEach(b=>b.onclick=()=>{n=Number(b.dataset.n);h.innerHTML='<div class="grab"></div>'+html();bind(h)});
+    h.querySelectorAll("[data-ck]").forEach(c=>c.onchange=()=>{if(c.checked)ck[c.dataset.ck]=1;else delete ck[c.dataset.ck];persist()});
+    h.querySelector("#shX").onclick=closeSheet;
+    h.querySelector("#shClr").onclick=()=>{Object.keys(ck).forEach(k=>delete ck[k]);persist();h.innerHTML='<div class="grab"></div>'+html();bind(h)};
+    h.querySelector("#shCopy").onclick=()=>{const text="Lista de compras ("+n+" días)\n"+shopList(n).map(x=>"- "+x.name+": "+x.txt).join("\n");
+      if(navigator.share)navigator.share({text}).catch(()=>{});else if(navigator.clipboard)navigator.clipboard.writeText(text).then(()=>toast("Lista copiada."),()=>toast("No se pudo copiar."));else toast("Este navegador no permite compartir.")};
+  };
+  openSheet(html(),bind);
+}
+/* ---- calculadora de metas ---- */
+function calcSheet(){
+  const pf=Object.assign({sex:"m",age:22,h:168,w:bodyWeight(),act:1.6,rate:0.8},S.config.profile||{});
+  const calc=()=>{const bmr=10*pf.w+6.25*pf.h-5*pf.age+(pf.sex==="m"?5:-161),tdee=bmr*pf.act,avg=Math.max(pf.sex==="m"?1500:1200,tdee-pf.rate*1100),P=Math.round(2.2*pf.w/5)*5;
+    const mk=(kcal,gf)=>{const g=Math.round(gf*pf.w/5)*5;return{p:P,c:Math.max(50,Math.round((kcal-P*4-g*9)/20)*5),g}};
+    return{tdee,avg,tr:mk(avg+115,0.75),re:mk(avg-290,0.63)}};
+  const kc=t=>t.p*4+t.c*4+t.g*9,row=(l,t)=>'<tr><td>'+l+'</td><td class="n">'+fmt(kc(t))+'</td><td class="n">'+t.p+'</td><td class="n">'+t.c+'</td><td class="n">'+t.g+'</td></tr>';
+  const out=()=>{const r=calc();return'<div class="stat" style="grid-template-columns:repeat(2,minmax(0,1fr))"><div><span>Gastas al día</span><b class="num">'+fmt(r.tdee)+'</b><span>kcal aprox.</span></div><div><span>Para tu ritmo, comes</span><b class="num">'+fmt(r.avg)+'</b><span>kcal promedio</span></div></div><table class="ftable" style="margin-top:8px"><thead><tr><th></th><th class="n">kcal</th><th class="n">Prot</th><th class="n">Carb</th><th class="n">Grasa</th></tr></thead><tbody>'+row("Entreno",r.tr)+row("Descanso",r.re)+'</tbody></table>'+(pf.rate>pf.w*0.01?'<p class="note" style="color:var(--warn);margin-top:8px">Ese ritmo es más de 1 % de tu peso por semana: arriesgas músculo.</p>':'')};
+  const opt=(list,cur)=>list.map(([v,l])=>'<option value="'+v+'"'+(String(cur)===String(v)?' selected':'')+'>'+l+'</option>').join("");
+  openSheet('<h2>Calcular mis metas</h2><div class="grid2"><label class="field">Sexo<select id="cSex">'+opt([["m","Hombre"],["f","Mujer"]],pf.sex)+'</select></label><label class="field">Edad<input id="cAge" inputmode="numeric" value="'+pf.age+'"></label><label class="field">Estatura (cm)<input id="cH" inputmode="numeric" value="'+pf.h+'"></label><label class="field">Peso (kg)<input id="cW" inputmode="decimal" value="'+f1(pf.w)+'"></label></div>'+
+    '<label class="field">Actividad<select id="cAct">'+opt([[1.45,"Trabajo sentado + gym"],[1.6,"Trabajo de pie + gym 4 a 5 días"],[1.75,"Trabajo físico pesado + gym"]],pf.act)+'</select></label>'+
+    '<label class="field">Ritmo de bajada<select id="cRate">'+opt([[0,"Mantener peso"],[0.4,"0,4 kg por semana (suave)"],[0.6,"0,6 kg por semana"],[0.8,"0,8 kg por semana"],[1,"1 kg por semana (agresivo)"]],pf.rate)+'</select></label><div id="cOut"></div>'+
+    '<p class="note">Usa la fórmula Mifflin-St Jeor, con 2,2 g de proteína por kilo. Es un punto de partida: Progreso lo afina con tus pesajes.</p><div class="actions"><button class="btn primary" type="button" id="cOk">Usar estas metas</button><button class="btn" type="button" id="cX">Cancelar</button></div>',h=>{
+    const upd=()=>{pf.sex=h.querySelector("#cSex").value;pf.age=num(h.querySelector("#cAge").value)||pf.age;pf.h=num(h.querySelector("#cH").value)||pf.h;pf.w=num(h.querySelector("#cW").value)||pf.w;pf.act=Number(h.querySelector("#cAct").value);pf.rate=Number(h.querySelector("#cRate").value);h.querySelector("#cOut").innerHTML=out()};
+    h.querySelectorAll("input,select").forEach(el=>{el.oninput=upd;el.onchange=upd});upd();
+    h.querySelector("#cX").onclick=closeSheet;
+    h.querySelector("#cOk").onclick=()=>{const r=calc(),c=S.config;c.targets={semana:clone(r.tr),finde:clone(r.tr),descanso:clone(r.re)};c.carbAdjust=0;(c.adjustLog=c.adjustLog||[]).push(todayISO()+": metas recalculadas con la calculadora");c.profile=clone(pf);c.cardioWeight=pf.w;persist();closeSheet();render();toast('Metas actualizadas. Usa "Cuadrar el día" para ajustar las porciones.')}});
+}
+/* ---- meta con fecha y resumen de la semana ---- */
+function goalCard(w){const g=S.config.goal||{},cur=w.length?w[w.length-1].v:null;
+  let h='<div class="card"><h2 style="font-size:19px">Meta</h2><div class="grid2" style="margin-top:8px"><label class="field">Peso meta (kg)<input id="gW" inputmode="decimal" value="'+(g.w?f1(g.w):'')+'" placeholder="76"></label><label class="field">Fecha<input type="date" id="gD" value="'+esc(g.date||"2027-02-15")+'"></label></div>',t="";
+  if(g.w&&g.date&&cur){const days=(parseISO(g.date)-parseISO(todayISO()))/864e5,left=cur-g.w;
+    if(left<=0)t="Meta cumplida. Define una nueva o pasa a mantención con la calculadora de Ajustes.";
+    else if(days<=0)t="La fecha ya pasó y te faltan "+f1(left)+" kg. Pon una fecha nueva.";
+    else{const need=left/(days/7),first=w[0].v,pct=Math.max(0,Math.min(100,(first-cur)/Math.max(0.1,first-g.w)*100)),rec=w.filter(p=>parseISO(p.d)>=parseISO(addDays(todayISO(),-21))),s=rec.length>1?slope(rec):null;
+      h+='<div class="track" style="margin-top:12px;height:12px" role="img" aria-label="Avance hacia la meta: '+Math.round(pct)+' %"><div class="eat" style="width:'+pct+'%;background:var(--accent)"></div></div>';
+      t="Te faltan <b>"+f1(left)+" kg</b> en "+Math.max(1,Math.round(days/7))+" semanas: necesitas bajar <b>"+f1(need)+" kg por semana</b>."+(need>cur*0.01?" Es más de 1 % de tu peso por semana: conviene mover la fecha o la meta para cuidar el músculo.":"")+(s!=null?" A tu ritmo de las últimas semanas llegarías a esa fecha con <b>"+f1(cur+s*days/7)+" kg</b>.":"")}}
+  else t="Pon tu peso meta y la fecha. Con tus pesajes te digo qué ritmo necesitas y con cuánto llegarías.";
+  return h+'<p class="note" style="margin-top:8px">'+t+'</p></div>'}
+function weekStats(){const days=[];
+  for(let i=6;i>=0;i--){const ds=addDays(todayISO(),-i),d=S.days[ds]&&S.days[ds].t?S.days[ds]:null;days.push({ds,eat:d?sum(d.meals.filter(m=>m.done).map(mealMacro)):null,t:d?targetForDay(d):null})}
+  const used=days.filter(x=>x.eat&&x.eat.kcal>0);if(!used.length)return'';
+  const avg=k=>used.reduce((a,x)=>a+x.eat[k],0)/used.length,avgT=used.reduce((a,x)=>a+x.t.kcal,0)/used.length,max=1.12*Math.max(1,...days.map(x=>Math.max(x.eat?x.eat.kcal:0,x.t?x.t.kcal:0)));
+  let streak=0;for(let i=0;i<60;i++){const d=S.days[addDays(todayISO(),-i)];const ms=d&&d.t?d.meals.filter(m=>!m.extra):[];const ok=ms.length&&ms.filter(m=>m.done).length/ms.length>=0.8;if(ok)streak++;else if(i>0)break}
+  const diff=avg("kcal")-avgT;
+  return'<div class="card"><h2 style="font-size:19px">Últimos 7 días</h2><div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;height:120px;margin-top:10px" role="img" aria-label="Calorías comidas por día contra la meta">'+
+    days.map(x=>{const e=x.eat?x.eat.kcal:0,over=x.t&&e>x.t.kcal*1.05;return'<div style="position:relative;height:100%;display:flex;align-items:flex-end;background:var(--surface-2);border-radius:8px;overflow:hidden"><div style="width:100%;height:'+(e/max*100)+'%;background:'+(over?'var(--warn)':'var(--accent)')+';border-radius:8px 8px 0 0"></div>'+(x.t?'<i style="position:absolute;left:0;right:0;bottom:'+(x.t.kcal/max*100)+'%;border-top:2px dashed var(--ink);opacity:.55"></i>':'')+'</div>'}).join("")+'</div>'+
+    '<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;text-align:center;font-size:12px;color:var(--muted);margin-top:4px">'+days.map(x=>'<span>'+WD[parseISO(x.ds).getDay()]+'</span>').join("")+'</div>'+
+    '<p class="note" style="margin-top:8px">La línea punteada es tu meta de cada día; la barra, lo que marcaste como comido.</p>'+
+    '<div class="stat" style="margin-top:10px"><div><span>Promedio</span><b class="num">'+fmt(avg("kcal"))+'</b><span>kcal ('+(diff>0?'+':'')+fmt(diff)+' vs meta)</span></div><div><span>Proteína</span><b class="num">'+fmt(avg("p"))+' g</b><span>promedio al día</span></div><div><span>Racha</span><b class="num">'+streak+'</b><span>'+(streak===1?'día cumplido':'días cumplidos')+'</span></div></div></div>'}
+
 /* ================= Render y navegación ================= */
 function render(){
   const v=document.getElementById("view");
@@ -718,7 +868,14 @@ document.addEventListener("click",e=>{
     if(val==="reset"){cfg.carbAdjust=0;cfg.adjustLog.push(todayISO()+": ajuste de carbos vuelve a 0")}
     else{cfg.carbAdjust=(cfg.carbAdjust||0)+Number(val);cfg.adjustLog.push(todayISO()+": "+(Number(val)>0?"+":"")+val+" g de carbos por día (queda en "+cfg.carbAdjust+" g)")}
     persist();render();toast('Meta de carbos actualizada. Usa "Cuadrar lo que queda" para ajustar las porciones.');return}
+  if(ds.save){saveMealSheet(ds.save);return}
   switch(b.id){
+    case "barFood":scanSheet();return;
+    case "onFood":onlineSheet(foodQuery,null);return;
+    case "shopBtn":shopSheet();return;
+    case "calcBtn":calcSheet();return;
+    case "copyY":copyYesterday();return;
+    case "clrSaved":confirmSheet("Borrar comidas guardadas","Se borran todas las comidas de Mis comidas. Tus días anotados no cambian.","Borrar",true,()=>{S.config.saved=[];persist();render();toast("Comidas guardadas borradas.")});return;
     case "creaBtn":{const d=dayDoc(S.date);d.creatina=!d.creatina;touch(S.date);if(d.creatina)buzz();render();return}
     case "fitBtn":fitDay();return;
     case "extraBtn":pickerSheet(null,true);return;
@@ -751,6 +908,7 @@ document.addEventListener("change",e=>{
   if(el.dataset.swap&&el.value){const d=dayDoc(S.date),{it}=findItem(d,el.dataset.swap),o=food(el.value),nq=equiv(it,o),old=food(it.f).name;it.f=o.id;it.q=nq;touch(S.date);render();toast(short(old)+" → "+short(o.name)+" "+f1(nq)+" "+o.unit);return}
   if(el.dataset.wd){S.config.weekMap[el.dataset.wd]=el.value;Object.keys(S.days).forEach(k=>{if(!S.days[k].t)delete S.days[k]});persist();toast(cap(WD_LONG[el.dataset.wd])+": "+TYPES[el.value].label.toLowerCase()+". Aplica a los días que aún no tocas.");return}
   if(el.dataset.target){render();return}
+  if(el.id==="gW"||el.id==="gD"){const w=num(document.getElementById("gW").value),dt=document.getElementById("gD").value;S.config.goal={w:w&&w>35&&w<250?w:null,date:dt||null};persist();render();return}
   if(el.id==="themeSel"){S.settings.theme=el.value;saveSettings();applyTheme();return}
   if(el.id==="cardioMin"){const v=Math.round(num(el.value)||0);const d=dayDoc(S.date);if(d.cardio&&v!==d.cardio.min)setCardio(d.cardio.type,Math.max(0,Math.min(180,v)));return}
   if(el.id==="cardioBack"){S.config.cardioBack=Number(el.value);persist();toast("Listo. Aplica a los días en que marques cardio.");return}
