@@ -1,7 +1,7 @@
 /* Pauta — app de pauta de alimentación. Todo vive en este archivo; los datos se guardan en el celular. */
 (function () {
 "use strict";
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.0.1";
 
 /* ================= Datos base ================= */
 const BUILTIN = [
@@ -698,7 +698,9 @@ function offToFood(p){const n=p.nutriments||{},P=nn(n.proteins_100g),C=nn(n.carb
   return{name:name.slice(0,60),cat:top<12?"otro":top===P*4?"prote":top===C*4?"carbo":"grasa",unit:"g",base:100,def:sq&&sq>0?sq:100,p:r1(P),c:r1(C),g:r1(G),code:String(p.code||""),src:"off"}}
 async function offGet(url){let r;try{r=await fetch(url)}catch(e){throw{code:"offline"}}if(r.status===404)return null;if(!r.ok)throw{code:"busy"};return r.json()}
 async function offByCode(code){const j=await offGet(OFF+"/api/v2/product/"+encodeURIComponent(code)+".json?fields="+OFF_F);return j&&j.product?offToFood(Object.assign({},j.product,{code})):null}
-async function offSearch(q){const j=await offGet(OFF+"/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&tagtype_0=countries&tag_contains_0=contains&tag_0=chile&sort_by=unique_scans_n&json=1&page_size=24&fields="+OFF_F);return((j&&j.products)||[]).map(offToFood).filter(Boolean)}
+function offSearch(q){return new Promise((ok,no)=>{const cb="__off"+uid(),s=document.createElement("script"),end=()=>{clearTimeout(t);delete window[cb];s.remove()},t=setTimeout(()=>{end();no({code:"busy"})},20000);
+  window[cb]=j=>{end();ok(((j&&j.products)||[]).map(offToFood).filter(Boolean))};s.onerror=()=>{end();no({code:navigator.onLine===false?"offline":"busy"})};
+  s.src=OFF+"/cgi/search.pl?search_terms="+encodeURIComponent(q)+"&tagtype_0=countries&tag_contains_0=contains&tag_0=chile&sort_by=unique_scans_n&json=1&jsonp="+cb+"&page_size=24&fields="+OFF_F;document.head.appendChild(s)})}
 function saveOff(f){const ex=Object.values(S.custom).find(x=>x.code&&x.code===f.code&&!x.temp);if(ex)return ex;const nf=Object.assign({id:"c_"+uid()},f);S.custom[nf.id]=nf;persist();askPersistent();return nf}
 function loadScript(src){return new Promise((ok,no)=>{const s=document.createElement("script");s.src=src;s.onload=ok;s.onerror=no;document.head.appendChild(s)})}
 function scanSheet(onFood){
